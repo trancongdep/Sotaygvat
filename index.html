@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Sổ Tay Giảng Viên</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .hidden { display: none !important; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Animations */
+        .modal-enter { transform: translateY(100%); transition: transform 0.3s ease-out; }
+        .modal-active { transform: translateY(0); }
+        .toast-enter { transform: translateY(-20px); opacity: 0; }
+        .toast-active { transform: translateY(0); opacity: 1; transition: all 0.3s ease; }
+        .sidebar-enter { transform: translateX(-100%); transition: transform 0.3s ease-out; }
+        .sidebar-active { transform: translateX(0); }
+        .fade-enter { opacity: 0; transition: opacity 0.3s ease; }
+        .fade-active { opacity: 1; }
+    </style>
+</head>
+<body class="text-slate-800 antialiased h-screen overflow-hidden flex flex-col relative">
+
+    <div id="toast" class="fixed top-5 left-1/2 transform -translate-x-1/2 z-[130] hidden transition-all duration-300 w-11/12 max-w-sm">
+        <div class="bg-slate-800 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3">
+            <i class="fa-solid fa-circle-check text-emerald-400 text-xl"></i>
+            <div>
+                <h4 class="font-bold text-sm">Thông báo</h4>
+                <p class="text-xs text-slate-300" id="toast-message">Nội dung thông báo.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-section" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-50 px-4">
+        <div class="w-full max-w-sm">
+            <div class="text-center mb-10">
+                <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-blue-600 text-white mb-6 shadow-lg shadow-blue-500/30">
+                    <i class="fa-solid fa-graduation-cap text-3xl"></i>
+                </div>
+                <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Giảng Viên Pro</h1>
+                <p class="text-slate-500 mt-2" id="auth-subtitle">Đăng nhập hệ thống</p>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
+                <form id="auth-form" class="space-y-4">
+                    <div id="div-fullname" class="hidden">
+                        <label class="block mb-2 text-sm font-semibold text-slate-700">Họ và tên <span class="text-red-500">*</span></label>
+                        <input type="text" id="reg-fullname" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nhập tên hiển thị">
+                    </div>
+                    <div><label class="block mb-2 text-sm font-semibold text-slate-700">Email</label><input type="email" id="email" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500"></div>
+                    <div><label class="block mb-2 text-sm font-semibold text-slate-700">Mật khẩu</label><input type="password" id="password" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500"></div>
+                    <button type="submit" id="btn-auth-submit" class="w-full text-white bg-blue-600 hover:bg-blue-700 font-semibold rounded-xl text-sm px-5 py-3.5 shadow-lg shadow-blue-500/30 transition-all active:scale-95 mt-2">Đăng nhập</button>
+                </form>
+                <div class="mt-4 text-center">
+                    <p class="text-sm text-slate-500" id="auth-switch-text">Chưa có tài khoản? <button onclick="toggleAuthMode()" class="text-blue-600 font-bold hover:underline">Đăng ký ngay</button></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar-overlay" onclick="toggleSidebar(false)" class="fixed inset-0 bg-slate-900/50 z-[80] hidden fade-enter backdrop-blur-sm"></div>
+    <div id="sidebar" class="fixed inset-y-0 left-0 w-72 bg-white z-[90] shadow-2xl sidebar-enter flex flex-col hidden">
+        <div class="p-6 bg-blue-600 text-white">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-xl font-bold border border-white/30" id="sidebar-avatar">U</div>
+                <div><h3 class="font-bold text-lg leading-tight" id="sidebar-username">User</h3><p class="text-xs text-blue-200">Giảng viên</p></div>
+            </div>
+        </div>
+        <div class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+            <button onclick="switchTab('home')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition sidebar-item active-item"><i class="fa-solid fa-house w-6 text-center"></i> Trang chủ</button>
+            <button onclick="switchTab('partners')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition sidebar-item"><i class="fa-solid fa-building-user w-6 text-center"></i> Đối tác & Khách hàng</button>
+            <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 cursor-not-allowed sidebar-item"><i class="fa-solid fa-clock-rotate-left w-6 text-center"></i> Lịch sử (Coming soon)</button>
+            <hr class="my-2 border-slate-100">
+            <button onclick="switchTab('about')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition sidebar-item"><i class="fa-solid fa-circle-info w-6 text-center"></i> Giới thiệu</button>
+            <button onclick="switchTab('settings')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition sidebar-item"><i class="fa-solid fa-gear w-6 text-center"></i> Cài đặt</button>
+        </div>
+        <div class="p-4 border-t border-slate-100">
+            <button id="logout-btn-sidebar" class="w-full flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-bold text-red-500 bg-red-50 hover:bg-red-100 transition"><i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng xuất</button>
+            <p class="text-[10px] text-center text-slate-400 mt-2">Version 2.2.0</p>
+        </div>
+    </div>
+
+    <div id="app-shell" class="hidden flex flex-col h-full w-full max-w-md mx-auto bg-slate-50 relative shadow-2xl">
+        <header class="flex-none bg-white px-5 py-4 border-b border-slate-100 flex items-center gap-4 z-20">
+            <button onclick="toggleSidebar(true)" class="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-50 transition"><i class="fa-solid fa-bars text-xl"></i></button>
+            <h2 id="header-title" class="text-lg font-bold text-slate-800 flex-1">Trang chủ</h2>
+            <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs" id="header-avatar">U</div>
+        </header>
+
+        <main id="main-content" class="flex-1 overflow-y-auto no-scrollbar p-5 pb-24 relative">
+            <div id="view-home" class="view-section">
+                <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white shadow-lg mb-6 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-white opacity-10 rounded-full -mr-10 -mt-10"></div>
+                    <div class="relative z-10 flex justify-between items-end">
+                        <div><p class="text-blue-100 text-xs font-medium uppercase mb-1">Tổng thu nhập</p><h3 class="text-2xl font-bold tracking-tight" id="dashboard-total-income">0 đ</h3></div>
+                        <div class="text-right"><p class="text-blue-200 text-[10px] uppercase mb-1">Chờ thu</p><p class="text-lg font-bold text-amber-300" id="dashboard-pending-income">0 đ</p></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between items-end mb-3"><h3 class="font-bold text-slate-800">Lớp học gần đây</h3><button onclick="loadDashboardData()" class="text-blue-500 text-xs"><i class="fa-solid fa-rotate"></i> Làm mới</button></div>
+                    <div id="job-list-container" class="space-y-3 pb-4"></div>
+                </div>
+            </div>
+
+            <div id="view-partners" class="view-section hidden">
+                <div class="flex justify-between items-center mb-4"><p class="text-sm text-slate-500">Quản lý các đơn vị hợp tác</p><button onclick="togglePartnerModal(true)" class="bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold"><i class="fa-solid fa-plus mr-1"></i>Thêm</button></div>
+                <div id="partner-list-container" class="space-y-3"></div>
+            </div>
+
+            <div id="view-about" class="view-section hidden">
+                <div class="bg-white rounded-2xl p-6 text-center shadow-sm border border-slate-100 mb-6">
+                    <div class="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl"><i class="fa-solid fa-laptop-code"></i></div>
+                    <h2 class="text-xl font-bold text-slate-800">Giảng Viên Pro</h2>
+                    <div class="mt-4 inline-block px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full">Version 2.2.0</div>
+                </div>
+            </div>
+
+            <div id="view-settings" class="view-section hidden">
+                <div class="space-y-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm relative">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-2xl font-bold" id="setting-avatar">U</div>
+                            <div>
+                                <h3 class="font-bold text-lg text-slate-800" id="setting-name">User Name</h3>
+                                <p class="text-sm text-slate-500">Giảng viên</p>
+                            </div>
+                        </div>
+                        <div class="space-y-2 text-sm border-t border-slate-100 pt-3">
+                            <div class="flex justify-between"><span class="text-slate-500">Email</span><span class="font-medium text-slate-800" id="setting-email">...</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Điện thoại</span><span class="font-medium text-slate-800" id="setting-phone">--</span></div>
+                        </div>
+                        <button onclick="toggleProfileModal(true)" class="absolute top-4 right-4 text-blue-600 hover:bg-blue-50 p-2 rounded-full transition">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                    </div>
+
+                    <button id="logout-btn-main" class="w-full bg-white border border-red-100 text-red-500 p-4 rounded-xl font-medium flex justify-between items-center shadow-sm">
+                        <span>Đăng xuất</span><i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <button id="fab-add" onclick="toggleAddModal(true)" class="absolute bottom-6 right-6 bg-blue-600 text-white w-14 h-14 rounded-full shadow-xl shadow-blue-600/40 flex items-center justify-center text-2xl hover:bg-blue-700 active:scale-90 transition transform z-40"><i class="fa-solid fa-plus"></i></button>
+    </div>
+
+    <div id="profile-modal" class="fixed inset-0 z-[70] bg-slate-50 flex flex-col hidden modal-enter">
+        <div class="bg-white px-5 py-4 border-b border-slate-100 flex justify-between items-center shadow-sm">
+            <button onclick="toggleProfileModal(false)" class="text-slate-500 px-2 py-1">Hủy</button>
+            <h2 class="font-bold text-lg">Cập nhật thông tin</h2>
+            <button onclick="saveUserProfile()" class="text-blue-600 font-bold px-2 py-1" id="btn-save-profile">Lưu</button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-5">
+            <form id="profile-form" class="space-y-5">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Họ và tên <span class="text-red-500">*</span></label>
+                        <input type="text" id="prof-name" class="w-full border-slate-200 rounded-lg text-sm p-3 bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Số điện thoại</label>
+                        <input type="tel" id="prof-phone" class="w-full border-slate-200 rounded-lg text-sm p-3 bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500" placeholder="090...">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Email (Không thể sửa)</label>
+                        <input type="email" id="prof-email" disabled class="w-full border-slate-100 rounded-lg text-sm p-3 bg-slate-100 text-slate-400">
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="detail-modal" class="fixed inset-0 z-[60] bg-slate-900/50 hidden flex items-end justify-center sm:items-center">
+        <div class="bg-white w-full max-w-md h-[90vh] sm:h-auto sm:rounded-2xl rounded-t-2xl flex flex-col shadow-2xl modal-enter" id="detail-modal-content">
+            <div class="flex-none bg-white px-5 py-4 border-b border-slate-100 flex justify-between items-center rounded-t-2xl">
+                <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-full bg-slate-50"><i class="fa-solid fa-xmark"></i></button>
+                <div class="flex gap-2"><button onclick="editJobFromDetail()" class="text-blue-600 bg-blue-50 w-8 h-8 flex items-center justify-center rounded-full hover:bg-blue-100"><i class="fa-solid fa-pen"></i></button><button onclick="deleteJobFromDetail()" class="text-red-600 bg-red-50 w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-100"><i class="fa-solid fa-trash"></i></button></div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-5 pb-24">
+                <div class="text-center mb-6"><h2 class="text-xl font-bold text-slate-900 leading-tight" id="d-title">Title</h2><p class="text-sm text-slate-500 mt-1" id="d-partner">Partner</p><div class="mt-3 inline-block px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-600" id="d-status-badge">Pending</div></div>
+                <div class="bg-slate-50 rounded-xl p-4 mb-4 space-y-3 text-sm"><div class="flex items-center gap-3"><i class="fa-regular fa-calendar text-slate-400 w-5"></i><span id="d-date">--</span></div><div class="flex items-center gap-3"><i class="fa-solid fa-location-dot text-slate-400 w-5"></i><span id="d-location">...</span></div></div>
+                <h3 class="font-bold text-sm text-slate-400 uppercase mb-3">Chi tiết thanh toán</h3><div class="space-y-3" id="d-cost-list"></div><div class="border-t border-dashed border-slate-300 my-4 pt-3 flex justify-between items-center"><span class="font-bold text-slate-700">Tổng cộng</span><span class="font-bold text-xl text-blue-600" id="d-total">0 đ</span></div>
+            </div>
+            <div class="flex-none bg-white p-4 border-t border-slate-100"><button id="btn-toggle-payment" onclick="togglePaymentStatus()" class="w-full py-3.5 rounded-xl font-bold text-white shadow-lg transition-colors flex items-center justify-center gap-2"></button></div>
+        </div>
+    </div>
+
+    <div id="add-modal" class="fixed inset-0 z-[50] bg-slate-50 flex flex-col hidden modal-enter">
+        <div class="bg-white px-5 py-4 border-b border-slate-100 flex justify-between items-center shadow-sm">
+            <button onclick="toggleAddModal(false)" class="text-slate-500 px-2 py-1">Hủy</button>
+            <h2 class="font-bold text-lg" id="modal-title">Thêm Lớp Mới</h2>
+            <button onclick="saveJobToFirestore()" class="text-blue-600 font-bold px-2 py-1" id="btn-save-job">Lưu</button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-5 pb-20">
+            <form id="add-job-form" class="space-y-5">
+                <input type="hidden" id="inp-job-id" value="">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <h3 class="text-sm font-bold text-slate-400 uppercase">Thông tin lớp học</h3>
+                    <div><label class="block text-xs font-semibold text-slate-700 mb-1">Tên lớp <span class="text-red-500">*</span></label><input type="text" id="inp-title" class="w-full border-slate-200 rounded-lg text-sm p-3 bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"></div>
+                    <div><label class="block text-xs font-semibold text-slate-700 mb-1">Đối tác <span class="text-red-500">*</span></label><div class="flex gap-2"><select id="inp-partner-select" onchange="onPartnerSelectChange()" class="w-full border-slate-200 rounded-lg text-sm p-3 bg-slate-50 outline-none"></select><button type="button" onclick="togglePartnerModal(true, true)" class="bg-blue-100 text-blue-600 w-12 rounded-lg flex items-center justify-center"><i class="fa-solid fa-plus"></i></button></div></div>
+                    <div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-700 mb-1">Ngày <span class="text-red-500">*</span></label><input type="date" id="inp-date" class="w-full border-slate-200 rounded-lg text-sm p-3 bg-slate-50 outline-none"></div><div><label class="block text-xs font-semibold text-slate-700 mb-1">Địa điểm</label><input type="text" id="inp-location" class="w-full border-slate-200 rounded-lg text-sm p-3 bg-slate-50 outline-none"></div></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center"><h3 class="text-sm font-bold text-slate-400 uppercase">Chi phí</h3><span class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded font-bold" id="display-total">Total: 0</span></div>
+                    <div class="grid grid-cols-1 gap-3">
+                        <div class="flex items-center gap-3"><div class="w-8 flex justify-center"><i class="fa-solid fa-chalkboard-user text-slate-400"></i></div><div class="flex-1"><label class="text-xs text-slate-500">Phí giảng</label><input type="number" id="cost-teaching" oninput="calculateTotal()" class="inp-cost w-full border-b border-slate-200 py-1 font-medium outline-none" placeholder="0"></div></div>
+                        <div class="flex items-center gap-3"><div class="w-8 flex justify-center"><i class="fa-solid fa-book text-slate-400"></i></div><div class="flex-1"><label class="text-xs text-slate-500">Tài liệu</label><input type="number" id="cost-material" oninput="calculateTotal()" class="inp-cost w-full border-b border-slate-200 py-1 font-medium outline-none" placeholder="0"></div></div>
+                        <div class="flex items-center gap-3"><div class="w-8 flex justify-center"><i class="fa-solid fa-car text-slate-400"></i></div><div class="flex-1"><label class="text-xs text-slate-500">Đi lại</label><input type="number" id="cost-travel" oninput="calculateTotal()" class="inp-cost w-full border-b border-slate-200 py-1 font-medium outline-none" placeholder="0"></div></div>
+                        <div class="flex items-center gap-3"><div class="w-8 flex justify-center"><i class="fa-solid fa-hotel text-slate-400"></i></div><div class="flex-1"><label class="text-xs text-slate-500">Khách sạn</label><input type="number" id="cost-hotel" oninput="calculateTotal()" class="inp-cost w-full border-b border-slate-200 py-1 font-medium outline-none" placeholder="0"></div></div>
+                        <div class="flex items-center gap-3"><div class="w-8 flex justify-center"><i class="fa-solid fa-ellipsis text-slate-400"></i></div><div class="flex-1"><label class="text-xs text-slate-500">Khác</label><input type="number" id="cost-other" oninput="calculateTotal()" class="inp-cost w-full border-b border-slate-200 py-1 font-medium outline-none" placeholder="0"></div></div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="partner-modal" class="fixed inset-0 z-[70] bg-slate-50 flex flex-col hidden modal-enter">
+        <div class="bg-white px-5 py-4 border-b border-slate-100 flex justify-between items-center shadow-sm"><button onclick="togglePartnerModal(false)" class="text-slate-500 px-2 py-1">Hủy</button><h2 class="font-bold text-lg">Thêm Đối Tác</h2><button onclick="savePartnerToFirestore()" class="text-blue-600 font-bold px-2 py-1" id="btn-save-partner">Lưu</button></div>
+        <div class="flex-1 overflow-y-auto p-5">
+            <form id="add-partner-form" class="space-y-5">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <div><label class="block text-xs font-semibold text-slate-700 mb-1">Tên Đối tác <span class="text-red-500">*</span></label><input type="text" id="p-name" class="w-full border-slate-200 rounded-lg text-sm p-3 bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"></div>
+                    <div><label class="block text-xs font-semibold text-slate-700 mb-1">Liên hệ</label><input type="text" id="p-contact" class="w-full border-slate-200 rounded-lg text-sm p-3 bg-slate-50 outline-none"></div>
+                    <div><label class="block text-xs font-semibold text-slate-700 mb-1">Điện thoại</label><input type="tel" id="p-phone" class="w-full border-slate-200 rounded-lg text-sm p-3 bg-slate-50 outline-none"></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <h3 class="text-sm font-bold text-slate-400 uppercase">Mức giá mặc định</h3>
+                    <div class="grid grid-cols-1 gap-3">
+                        <div class="flex items-center gap-3"><div class="flex-1"><label class="text-xs text-slate-500">Phí giảng</label><input type="number" id="p-rate-teaching" class="w-full border-b border-slate-200 py-1 outline-none" placeholder="0"></div></div>
+                        <div class="flex items-center gap-3"><div class="flex-1"><label class="text-xs text-slate-500">Tài liệu</label><input type="number" id="p-rate-material" class="w-full border-b border-slate-200 py-1 outline-none" placeholder="0"></div></div>
+                        <div class="flex items-center gap-3"><div class="flex-1"><label class="text-xs text-slate-500">Đi lại</label><input type="number" id="p-rate-travel" class="w-full border-b border-slate-200 py-1 outline-none" placeholder="0"></div></div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc, serverTimestamp, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyDKOD5DD_RX78E7MfirIOUvLyA5jPBqmsM", authDomain: "sotaygvat.firebaseapp.com", projectId: "sotaygvat", storageBucket: "sotaygvat.firebasestorage.app", messagingSenderId: "881998926558", appId: "1:881998926558:web:31af3321c6ad388b82a84f", measurementId: "G-6DZL1YDPGG" };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null, globalPartners = [], globalJobsCache = {}, currentDetailId = null, isRegisterMode = false;
+
+        // AUTH & PROFILE LOGIC
+        window.toggleAuthMode=()=>{isRegisterMode=!isRegisterMode;const t=isRegisterMode?"Đăng ký tài khoản":"Giảng Viên Pro";const s=isRegisterMode?"Tạo tài khoản mới":"Đăng nhập hệ thống";const b=isRegisterMode?"Đăng ký":"Đăng nhập";const sw=isRegisterMode?"Đã có tài khoản? <button onclick='toggleAuthMode()' class='text-blue-600 font-bold hover:underline'>Đăng nhập ngay</button>":"Chưa có tài khoản? <button onclick='toggleAuthMode()' class='text-blue-600 font-bold hover:underline'>Đăng ký ngay</button>";document.querySelector('#login-section h1').textContent=t;document.getElementById('auth-subtitle').textContent=s;document.getElementById('btn-auth-submit').textContent=b;document.getElementById('auth-switch-text').innerHTML=sw;const nameDiv=document.getElementById('div-fullname'); if(isRegisterMode)nameDiv.classList.remove('hidden');else nameDiv.classList.add('hidden');};
+        
+        document.getElementById('auth-form').addEventListener('submit',async(e)=>{
+            e.preventDefault();
+            const em=document.getElementById('email').value;const pw=document.getElementById('password').value;
+            if(isRegisterMode){
+                const name=document.getElementById('reg-fullname').value;
+                if(!name)return alert("Vui lòng nhập họ tên");
+                try{
+                    const u=await createUserWithEmailAndPassword(auth,em,pw);
+                    await updateProfile(u.user,{displayName:name});
+                    // Save to Firestore 'users' collection for extra fields (phone)
+                    await setDoc(doc(db,"users",u.user.uid),{name:name,email:em,createdAt:serverTimestamp()});
+                    showToast("Đăng ký thành công!");
+                }catch(err){alert(err.message);}
+            }else{
+                signInWithEmailAndPassword(auth,em,pw).catch(e=>alert(e.message));
+            }
+        });
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user; document.getElementById('login-section').classList.add('hidden'); document.getElementById('app-shell').classList.remove('hidden');
+                // Load additional Profile info from Firestore (Phone)
+                loadUserProfile(user);
+                loadPartners().then(() => loadDashboardData());
+            } else { currentUser = null; document.getElementById('login-section').classList.remove('hidden'); document.getElementById('app-shell').classList.add('hidden'); }
+        });
+
+        // --- NEW: USER PROFILE LOGIC ---
+        async function loadUserProfile(user) {
+            const name = user.displayName || user.email.split('@')[0];
+            const email = user.email;
+            
+            // UI Updates
+            document.getElementById('sidebar-username').textContent = name;
+            document.getElementById('sidebar-avatar').textContent = name.charAt(0).toUpperCase();
+            document.getElementById('header-avatar').textContent = name.charAt(0).toUpperCase();
+            document.getElementById('setting-avatar').textContent = name.charAt(0).toUpperCase();
+            document.getElementById('setting-name').textContent = name;
+            document.getElementById('setting-email').textContent = email;
+            
+            // Fetch phone from Firestore
+            try {
+                const docSnap = await getDoc(doc(db, "users", user.uid));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    const ph = data.phone || "--";
+                    document.getElementById('setting-phone').textContent = ph;
+                    // Pre-fill modal
+                    document.getElementById('prof-phone').value = data.phone || "";
+                } else {
+                    document.getElementById('setting-phone').textContent = "--";
+                }
+            } catch (e) { console.log(e); }
+            
+            document.getElementById('prof-name').value = name;
+            document.getElementById('prof-email').value = email;
+        }
+
+        window.toggleProfileModal = (s) => {
+            const m = document.getElementById('profile-modal');
+            if(s){m.classList.remove('hidden');setTimeout(()=>m.classList.add('modal-active'),10)}
+            else{m.classList.remove('modal-active');setTimeout(()=>m.classList.add('hidden'),300)}
+        };
+
+        window.saveUserProfile = async () => {
+            const newName = document.getElementById('prof-name').value.trim();
+            const newPhone = document.getElementById('prof-phone').value.trim();
+            if(!newName) return alert("Tên không được để trống");
+            
+            const btn = document.getElementById('btn-save-profile');
+            btn.textContent = "Đang lưu...";
+            
+            try {
+                // 1. Update Auth Profile
+                await updateProfile(currentUser, { displayName: newName });
+                
+                // 2. Update Firestore User Doc
+                await setDoc(doc(db, "users", currentUser.uid), {
+                    name: newName,
+                    phone: newPhone,
+                    email: currentUser.email
+                }, { merge: true });
+                
+                showToast("Cập nhật thành công!");
+                window.toggleProfileModal(false);
+                loadUserProfile(currentUser); // Refresh UI
+            } catch (e) { alert(e.message); }
+            finally { btn.textContent = "Lưu"; }
+        };
+
+        // HELPERS & SIDEBAR (Minified)
+        const formatCurrency=a=>new Intl.NumberFormat('vi-VN',{style:'currency',currency:'VND'}).format(a);
+        const formatDate=ts=>ts?ts.toDate().toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
+        const showToast=m=>{const t=document.getElementById('toast');document.getElementById('toast-message').textContent=m;t.classList.remove('hidden');setTimeout(()=>t.classList.add('toast-active'),10);setTimeout(()=>{t.classList.remove('toast-active');setTimeout(()=>t.classList.add('hidden'),300);},3000);};
+        window.toggleSidebar=s=>{const b=document.getElementById('sidebar');const o=document.getElementById('sidebar-overlay');if(s){o.classList.remove('hidden');setTimeout(()=>o.classList.add('fade-active'),10);b.classList.remove('hidden');setTimeout(()=>b.classList.add('sidebar-active'),10);}else{o.classList.remove('fade-active');setTimeout(()=>o.classList.add('hidden'),300);b.classList.remove('sidebar-active');setTimeout(()=>b.classList.add('hidden'),300);}};
+        window.switchTab=t=>{window.toggleSidebar(false);document.querySelectorAll('.sidebar-item').forEach(e=>{e.classList.remove('bg-blue-50','text-blue-600');e.classList.add('text-slate-600')});document.querySelectorAll('.view-section').forEach(e=>e.classList.add('hidden'));document.getElementById(`view-${t}`).classList.remove('hidden');const ts={'home':'Trang chủ','partners':'Đối tác','settings':'Cài đặt','about':'Giới thiệu'};document.getElementById('header-title').textContent=ts[t]||'Sổ Tay';const fab=document.getElementById('fab-add');if(t==='home'||t==='partners')fab.classList.remove('hidden');else fab.classList.add('hidden');};
+        window.logout=()=>signOut(auth);document.getElementById('logout-btn-sidebar').addEventListener('click',window.logout);document.getElementById('logout-btn-main').addEventListener('click',window.logout);
+
+        // DATA LOGIC (Minified)
+        window.loadDashboardData=async()=>{if(!currentUser)return;try{const q=query(collection(db,"jobs"),where("ownerId","==",currentUser.uid),orderBy("startDate","desc"));const snap=await getDocs(q);let t=0,p=0,h='';globalJobsCache={};if(snap.empty){document.getElementById('job-list-container').innerHTML=`<div class="text-center py-10 text-slate-400 text-sm">Chưa có lớp học nào.</div>`;return;}snap.forEach(ds=>{const d=ds.data();const id=ds.id;globalJobsCache[id]={id,...d};t+=d.totalAmount||0;if(d.paymentStatus==='pending')p+=d.totalAmount||0;const c=d.paymentStatus==='paid'?'bg-emerald-100 text-emerald-600':'bg-amber-100 text-amber-600';const st=d.paymentStatus==='paid'?'Đã thu':'Chờ thu';h+=`<div onclick="openJobDetail('${id}')" class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center active:bg-slate-50 transition cursor-pointer"><div><div class="flex items-center gap-2 mb-1"><span class="text-[10px] font-bold px-2 py-0.5 rounded ${c}">${st}</span><span class="text-xs text-slate-400 font-medium">${formatDate(d.startDate)}</span></div><h4 class="font-bold text-slate-800 leading-tight">${d.title}</h4><p class="text-xs text-slate-500 mt-1">${d.partnerName}</p></div><div class="text-right"><p class="font-bold text-blue-600 text-sm">${formatCurrency(d.totalAmount)}</p><i class="fa-solid fa-chevron-right text-slate-300 text-xs mt-1"></i></div></div>`;});document.getElementById('job-list-container').innerHTML=h;document.getElementById('dashboard-total-income').textContent=formatCurrency(t);document.getElementById('dashboard-pending-income').textContent=formatCurrency(p);}catch(e){console.error(e);}};
+        window.openJobDetail=id=>{currentDetailId=id;const j=globalJobsCache[id];if(!j)return;document.getElementById('d-title').textContent=j.title;document.getElementById('d-partner').textContent=j.partnerName;document.getElementById('d-date').textContent=formatDate(j.startDate);document.getElementById('d-location').textContent=j.location||'...';document.getElementById('d-total').textContent=formatCurrency(j.totalAmount);const isP=j.paymentStatus==='paid';const bg=document.getElementById('d-status-badge');const btn=document.getElementById('btn-toggle-payment');if(isP){bg.className="mt-3 inline-block px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-600";bg.textContent="Đã thu tiền";btn.className="w-full py-3.5 rounded-xl font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center justify-center gap-2";btn.innerHTML=`<i class="fa-solid fa-rotate-left"></i> Đánh dấu là Chờ thu`;}else{bg.className="mt-3 inline-block px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-600";bg.textContent="Chờ thanh toán";btn.className="w-full py-3.5 rounded-xl font-bold text-white bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/30 transition-colors flex items-center justify-center gap-2";btn.innerHTML=`<i class="fa-solid fa-check"></i> Xác nhận đã thu tiền`;}let lh='';const cb=j.costBreakdown;[{l:'Phí giảng',v:cb.teachingFee},{l:'Tài liệu',v:cb.materialFee},{l:'Đi lại',v:cb.travelFee},{l:'Khách sạn',v:cb.hotelFee},{l:'Khác',v:cb.otherFee}].forEach(i=>{if(i.v>0)lh+=`<div class="flex justify-between text-sm"><span class="text-slate-600">${i.l}</span><span class="font-medium text-slate-800">${formatCurrency(i.v)}</span></div>`;});document.getElementById('d-cost-list').innerHTML=lh;const m=document.getElementById('detail-modal');m.classList.remove('hidden');setTimeout(()=>document.getElementById('detail-modal-content').classList.add('modal-active'),10);};
+        window.closeDetailModal=()=>{const mc=document.getElementById('detail-modal-content');mc.classList.remove('modal-active');setTimeout(()=>document.getElementById('detail-modal').classList.add('hidden'),300);currentDetailId=null;};
+        window.togglePaymentStatus=async()=>{if(!currentDetailId)return;const j=globalJobsCache[currentDetailId];const ns=j.paymentStatus==='paid'?'pending':'paid';try{await updateDoc(doc(db,"jobs",currentDetailId),{paymentStatus:ns});globalJobsCache[currentDetailId].paymentStatus=ns;window.openJobDetail(currentDetailId);showToast(ns==='paid'?"Đã cập nhật: Đã thu":"Đã cập nhật: Chờ thu");loadDashboardData();}catch(e){alert(e.message);}};
+        window.deleteJobFromDetail=async()=>{if(!currentDetailId||!confirm("Xóa?"))return;try{await deleteDoc(doc(db,"jobs",currentDetailId));showToast("Đã xóa");window.closeDetailModal();loadDashboardData();}catch(e){alert(e.message);}};
+        window.editJobFromDetail=()=>{if(!currentDetailId)return;const j=globalJobsCache[currentDetailId];window.closeDetailModal();window.toggleAddModal(true,true);document.getElementById('modal-title').textContent="Cập nhật";document.getElementById('inp-job-id').value=j.id;document.getElementById('inp-title').value=j.title;document.getElementById('inp-partner-select').value=j.partnerId;const d=j.startDate.toDate();document.getElementById('inp-date').value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;document.getElementById('inp-location').value=j.location;document.getElementById('cost-teaching').value=j.costBreakdown.teachingFee||'';document.getElementById('cost-material').value=j.costBreakdown.materialFee||'';document.getElementById('cost-travel').value=j.costBreakdown.travelFee||'';document.getElementById('cost-hotel').value=j.costBreakdown.hotelFee||'';document.getElementById('cost-other').value=j.costBreakdown.otherFee||'';window.calculateTotal();};
+        window.saveJobToFirestore=async()=>{if(!currentUser)return;const btn=document.getElementById('btn-save-job');const eid=document.getElementById('inp-job-id').value;const t=document.getElementById('inp-title').value.trim();const pid=document.getElementById('inp-partner-select').value;const d=document.getElementById('inp-date').value;if(!t||!pid||!d)return alert("Thiếu thông tin!");const pn=document.getElementById('inp-partner-select').options[document.getElementById('inp-partner-select').selectedIndex].text;const costs={teachingFee:Number(document.getElementById('cost-teaching').value)||0,materialFee:Number(document.getElementById('cost-material').value)||0,travelFee:Number(document.getElementById('cost-travel').value)||0,hotelFee:Number(document.getElementById('cost-hotel').value)||0,otherFee:Number(document.getElementById('cost-other').value)||0};const tot=Object.values(costs).reduce((a,b)=>a+b,0);btn.textContent="Lưu...";try{const data={title:t,partnerId:pid,partnerName:pn,startDate:new Date(d),location:document.getElementById('inp-location').value.trim(),costBreakdown:costs,totalAmount:tot};if(eid){await updateDoc(doc(db,"jobs",eid),data);showToast("Đã cập nhật!");}else{data.ownerId=currentUser.uid;data.status='upcoming';data.paymentStatus='pending';data.createdAt=serverTimestamp();await addDoc(collection(db,"jobs"),data);showToast("Đã thêm!");}window.toggleAddModal(false);loadDashboardData();}catch(e){alert(e.message);}finally{btn.textContent="Lưu";}};
+        async function loadPartners(){if(!currentUser)return;const q=query(collection(db,"partners"),where("ownerId","==",currentUser.uid),orderBy("name","asc"));const snap=await getDocs(q);globalPartners=[];let h='',o='<option value="">-- Chọn đối tác --</option>';snap.forEach(d=>{const p=d.data();globalPartners.push({id:d.id,...p});h+=`<div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center"><div><h4 class="font-bold text-slate-800">${p.name}</h4><p class="text-xs text-slate-500">${p.contactName||''}</p></div><div class="text-right"><p class="text-xs text-slate-400">Rate</p><p class="font-bold text-blue-600 text-sm">${formatCurrency(p.defaultRates?.teachingFee||0)}</p></div></div>`;o+=`<option value="${d.id}">${p.name}</option>`;});document.getElementById('partner-list-container').innerHTML=h;document.getElementById('inp-partner-select').innerHTML=o;}
+        window.onPartnerSelectChange=()=>{const id=document.getElementById('inp-partner-select').value;const p=globalPartners.find(x=>x.id===id);if(p&&p.defaultRates&&document.getElementById('inp-job-id').value===""){document.getElementById('cost-teaching').value=p.defaultRates.teachingFee||'';document.getElementById('cost-material').value=p.defaultRates.materialFee||'';document.getElementById('cost-travel').value=p.defaultRates.travelFee||'';window.calculateTotal();}};
+        window.savePartnerToFirestore=async()=>{if(!currentUser)return;const n=document.getElementById('p-name').value.trim();if(!n)return alert("Nhập tên!");const btn=document.getElementById('btn-save-partner');btn.textContent="Lưu...";try{await addDoc(collection(db,"partners"),{ownerId:currentUser.uid,name:n,contactName:document.getElementById('p-contact').value.trim(),phone:document.getElementById('p-phone').value.trim(),defaultRates:{teachingFee:Number(document.getElementById('p-rate-teaching').value)||0,materialFee:Number(document.getElementById('p-rate-material').value)||0,travelFee:Number(document.getElementById('p-rate-travel').value)||0},createdAt:serverTimestamp()});showToast("Đã thêm đối tác!");window.togglePartnerModal(false);loadPartners();}catch(e){alert(e.message);}finally{btn.textContent="Lưu";}};
+        window.toggleAddModal=(s,e)=>{const m=document.getElementById('add-modal');if(s){m.classList.remove('hidden');setTimeout(()=>m.classList.add('modal-active'),10);if(!e){document.getElementById('modal-title').textContent="Thêm Lớp Mới";document.getElementById('add-job-form').reset();document.getElementById('inp-job-id').value="";document.getElementById('inp-date').valueAsDate=new Date();document.getElementById('display-total').textContent="Total: 0";}}else{m.classList.remove('modal-active');setTimeout(()=>m.classList.add('hidden'),300);}};
+        window.togglePartnerModal=(s,h)=>{const m=document.getElementById('partner-modal');m.style.zIndex=h?'70':'60';if(s){m.classList.remove('hidden');setTimeout(()=>m.classList.add('modal-active'),10)}else{m.classList.remove('modal-active');setTimeout(()=>{m.classList.add('hidden');document.getElementById('add-partner-form').reset()},300)}};
+        window.calculateTotal=()=>{let t=0;document.querySelectorAll('.inp-cost').forEach(i=>t+=Number(i.value)||0);document.getElementById('display-total').textContent=`Total: ${formatCurrency(t)}`;};
+    </script>
+</body>
+</html>
